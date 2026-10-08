@@ -1,52 +1,96 @@
+import joblib
+import pandas as pd
 import streamlit as st
-import pickle
-import re
 
-# Load the trained model
-with open('trained_spam_model1.sav', 'rb') as model_file:
-    model = pickle.load(model_file)
+st.set_page_config(
+    page_title="SMS Spam Classifier",
+    page_icon="📩",
+    layout="centered"
+)
 
-# Load the vectorizer
-with open('vectorizer.pkl', 'rb') as vectorizer_file:
-    vectorizer = pickle.load(vectorizer_file)
+st.title("📩 SMS Spam Classifier")
+st.caption(
+    "Trained on the UCI SMS Spam Collection. Works on short text messages, "
+    "so results on long emails may be less reliable."
+)
 
-# Text cleaner to replicate VS Code behavior
-def clean_text(text):
-    text = text.lower()
-    text = re.sub(r'\W+', ' ', text)  # Remove special characters
-    text = re.sub(r'\s+', ' ', text)  # Normalize whitespace
-    return text.strip()
 
-# Streamlit UI
-st.set_page_config(page_title="Spam Mail Detector", layout="centered")
-st.title("📩 Spam Mail Detector")
-st.markdown("Enter your email content below to check if it's SPAM or NOT SPAM.")
+@st.cache_resource
+def load_bundle():
+    return joblib.load("models/spam_model.joblib")
 
-# Text input
-input_mail = st.text_area("✉ Paste the email content here:")
 
-# Prediction
-if st.button("Check Now"):
-    if input_mail.strip() == "":
-        st.warning("⚠ Please enter some email content.")
+bundle = load_bundle()
+pipe = bundle["pipeline"]
+
+st.caption(
+    f"Model: {bundle['model_name']} | "
+    f"Test ROC-AUC: {bundle['test_auc']:.3f}"
+)
+
+threshold = st.slider(
+    "Spam threshold",
+    0.10,
+    0.90,
+    0.50,
+    0.05,
+    help=(
+        "A message is marked spam if its spam probability is at or above "
+        "this value. Lower values catch more spam but may flag real messages."
+    )
+)
+
+examples = {
+    "(type your own)": "",
+    "Prize message": (
+        "Congratulations! You have won a free gift voucher. "
+        "Reply WIN now to claim"
+    ),
+    "Normal message": "Hey, are we still meeting for lunch tomorrow?",
+}
+
+choice = st.selectbox("Try an example", list(examples.keys()))
+text = st.text_area("Message", value=examples[choice], height=140)
+
+if st.button("Check message"):
+    if not text.strip():
+        st.warning("Please enter a message first.")
     else:
-        try:
-            cleaned_input = clean_text(input_mail)
+        proba = float(pipe.predict_proba([text])[0][1])
 
-            # ✅ Show what's being predicted
-            st.write("🔍 Cleaned Input:", cleaned_input)
+        if proba >= threshold:
+            st.error(f"Likely SPAM (spam probability {proba:.1%})")
+        else:
+            st.success(f"Looks OK (spam probability {proba:.1%})")
 
-            # Predict
-            transformed_input = vectorizer.transform([cleaned_input])
-            prediction = model.predict(transformed_input)[0]
-            proba = model.predict_proba(transformed_input)[0]
+        st.progress(proba)
 
-            st.write(f"🧠 Prediction Confidence — Not Spam: {proba[0]:.2f}, Spam: {proba[1]:.2f}")
+        # For linear models, show words that pushed the score towards spam
+        model = pipe.named_steps["model"]
 
-            if prediction == 1:
-                st.error("🚨 This is SPAM!")
-            else:
-                st.success("✅ This is NOT SPAM.")
-        except Exception as e:
-            st.error("❌ Prediction failed.")
-            st.exception(e)
+        if hasattr(model, "coef_"):
+            vec = pipe.named_steps["tfidf"]
+            x = vec.transform([text])
+            names = vec.get_feature_names_out()
+
+            contrib = x.multiply(model.coef_[0]).tocoo()
+
+            rows = sorted(
+                zip(contrib.col, contrib.data),
+                key=lambda t: -t[1]
+            )[:5]
+
+            rows = [
+                (names[c], v)
+                for c, v in rows
+                if v > 0
+            ]
+
+            if rows:
+                st.markdown("**Words that pushed towards spam:**")
+                st.table(
+                    pd.DataFrame(
+                        rows,
+                        columns=["Word", "Contribution"]
+                    ).round(3)
+                )
