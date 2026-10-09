@@ -84,7 +84,6 @@ SPAM-MAIL-DETECTOR/
 ├── README.md
 ├── requirements.txt
 ├── runtime.txt
-├── setup.sh
 |
 ├── assets/
 |
