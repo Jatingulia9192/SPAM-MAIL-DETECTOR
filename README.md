@@ -1,17 +1,32 @@
-# SMS Spam Classifier
+# SMS and Email Spam Detector
 
-This project is a machine learning based SMS spam classifier. It takes a text message as input and predicts whether the message is spam or a normal message.
+This is a machine learning project that checks whether a message or email is spam or normal. I built a Streamlit web application where users can enter a message or email and get a prediction.
 
-The project uses TF-IDF for converting text into numerical features and different machine learning algorithms for classification. A Streamlit application is also created so that the model can be tested through a simple web interface.
+The project uses TF-IDF to convert text into numerical features and machine learning models to classify the text. I trained separate models for SMS messages and emails.
 
-## Dataset
+## Features
 
-The dataset used in this project is the UCI SMS Spam Collection.
+- Detects spam in SMS messages
+- Detects spam in emails
+- Shows the spam probability for the entered text
+- Allows users to try sample messages and emails
+- Shows words that pushed the prediction towards spam
+- Provides a simple interface using Streamlit
 
-It contains SMS messages classified into two categories:
+## Datasets
 
-- ham - normal message
-- spam - spam message
+### SMS Dataset
+
+The SMS model uses the UCI SMS Spam Collection dataset. It contains messages labelled as:
+
+- **Ham:** Normal messages
+- **Spam:** Unwanted or spam messages
+
+### Email Dataset
+
+The email model uses the Apache SpamAssassin Public Corpus. I used the `easy_ham` and `spam` folders to prepare the email dataset for training.
+
+The email dataset contains both normal emails and spam emails. The email subject and text content are used by the model for prediction.
 
 ## Technologies Used
 
@@ -25,29 +40,40 @@ It contains SMS messages classified into two categories:
 
 ## Project Work
 
-In this project, I performed the following steps:
+In this project, I worked on the following steps:
 
 - Loaded and cleaned the SMS dataset
-- Removed duplicate messages
-- Prepared the data for machine learning
-- Used TF-IDF to convert text into numerical features
-- Compared different machine learning models
+- Prepared the email dataset from raw email files
+- Removed duplicate messages and emails
+- Converted text into numerical features using TF-IDF
+- Compared different machine learning models for SMS classification
+- Trained a separate model for email spam detection
 - Evaluated the models using precision, recall, F1-score and ROC-AUC
-- Selected the best model based on the results
-- Created a pipeline containing the TF-IDF vectorizer and machine learning model
-- Saved the trained model using Joblib
-- Developed a Streamlit application for testing new messages
+- Saved the trained models using Joblib
+- Created a Streamlit application for testing SMS messages and emails
 
 ## Models Used
 
-The following models were compared:
+For the SMS classifier, I compared the following models:
 
 - Multinomial Naive Bayes
 - Complement Naive Bayes
 - Logistic Regression
 - Random Forest
 
+For the email classifier, I used Logistic Regression with TF-IDF.
 
+## Email Model Results
+
+The email model was tested on a held-out test set containing 592 emails.
+
+- **Accuracy:** 99%
+- **Spam precision:** 99%
+- **Spam recall:** 94%
+- **Spam F1-score:** 96%
+- **ROC-AUC:** 0.9984
+
+These results are based on the test split used during training. Actual performance may be different on new emails.
 
 ## Project Structure
 
@@ -63,20 +89,26 @@ SPAM-MAIL-DETECTOR/
 ├── assets/
 |
 ├── data/
-|   └── SMSSpamCollection
+|   ├── SMSSpamCollection
+|   └── email_raw/
+|       ├── easy_ham/
+|       └── spam/
 |
 ├── models/
-|   └── spam_model.joblib
+|   ├── spam_model.joblib
+|   └── email_spam_model.joblib
 |
 ├── notebooks/
 |   └── 01_spam.ipynb
 |
 └── src/
+    ├── train_utils.py
+    └── train_email_model.py
 ```
 
 ## How to Run the Project
 
-First clone the repository:
+First, clone the repository:
 
 ```bash
 git clone https://github.com/Jatingulia9192/SPAM-MAIL-DETECTOR.git
@@ -100,19 +132,20 @@ Run the Streamlit application:
 streamlit run app.py
 ```
 
-The application will open in the browser.
+The application will open in the browser. Select SMS Message or Email, enter the text, and click the check button to get a prediction.
 
 ## Limitations
 
-The model is trained on SMS messages, so its performance may not be the same for long emails or other types of text.
+The models are trained on specific datasets, so they may not correctly identify every spam message or email.
 
-The dataset is also relatively old and mainly contains English messages. Spam messages can change over time, so the model may not correctly identify every new type of spam message.
+The email dataset is relatively old and mainly contains English emails. New spam messages may use different words and patterns, which can affect the predictions.
+
+The spam probability shown by the application is a model prediction and does not guarantee that a message is spam.
 
 ## Author
 
 Jatin Gulia
 
-B.Tech Computer Science and Engineering
-Specialization: Artificial Intelligence and Machine Learning
+B.Tech Computer Science and Engineering  
+Specialization: Artificial Intelligence and Machine Learning  
 DIT University, Dehradun
-```
