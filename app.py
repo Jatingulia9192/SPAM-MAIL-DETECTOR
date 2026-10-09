@@ -1,26 +1,37 @@
+
 import joblib
 import pandas as pd
 import streamlit as st
 
 st.set_page_config(
-    page_title="SMS Spam Classifier",
+    page_title="Spam Message Detector",
     page_icon="📩",
     layout="centered"
 )
 
-st.title("📩 SMS Spam Classifier")
-st.caption(
-    "Trained on the UCI SMS Spam Collection. Works on short text messages, "
-    "so results on long emails may be less reliable."
-)
-
+st.title("Spam Message Detector")
+st.caption("Check whether an SMS or email is spam.")
 
 @st.cache_resource
-def load_bundle():
+def load_sms_model():
     return joblib.load("models/spam_model.joblib")
 
 
-bundle = load_bundle()
+@st.cache_resource
+def load_email_model():
+    return joblib.load("models/email_spam_model.joblib")
+
+
+choice = st.selectbox(
+    "Select what you want to check",
+    ["SMS Message", "Email"]
+)
+
+if choice == "SMS Message":
+    bundle = load_sms_model()
+else:
+    bundle = load_email_model()
+
 pipe = bundle["pipeline"]
 
 st.caption(
@@ -34,27 +45,42 @@ threshold = st.slider(
     0.90,
     0.50,
     0.05,
-    help=(
-        "A message is marked spam if its spam probability is at or above "
-        "this value. Lower values catch more spam but may flag real messages."
-    )
+    help="Lower values catch more spam but may flag real messages."
 )
 
-examples = {
-    "(type your own)": "",
-    "Prize message": (
-        "Congratulations! You have won a free gift voucher. "
-        "Reply WIN now to claim"
-    ),
-    "Normal message": "Hey, are we still meeting for lunch tomorrow?",
-}
+if choice == "SMS Message":
+    examples = {
+        "(type your own)": "",
+        "Prize message": (
+            "Congratulations! You have won a free gift voucher. "
+            "Reply WIN now to claim"
+        ),
+        "Normal message": "Hey, are we still meeting for lunch tomorrow?"
+    }
+else:
+    examples = {
+        "(type your own)": "",
+        "Spam email": (
+            "Subject: You have won a prize! "
+            "Click here to claim your free cash reward."
+        ),
+        "Normal email": (
+            "Subject: Meeting tomorrow "
+            "Hi, please find the meeting details attached. "
+            "Let me know if you have any questions."
+        )
+    }
 
-choice = st.selectbox("Try an example", list(examples.keys()))
-text = st.text_area("Message", value=examples[choice], height=140)
+example = st.selectbox("Try an example", list(examples.keys()))
+text = st.text_area(
+    "Enter your message or email",
+    value=examples[example],
+    height=180
+)
 
-if st.button("Check message"):
+if st.button("Check for Spam"):
     if not text.strip():
-        st.warning("Please enter a message first.")
+        st.warning("Please enter some text first.")
     else:
         proba = float(pipe.predict_proba([text])[0][1])
 
@@ -65,7 +91,6 @@ if st.button("Check message"):
 
         st.progress(proba)
 
-        # For linear models, show words that pushed the score towards spam
         model = pipe.named_steps["model"]
 
         if hasattr(model, "coef_"):
@@ -94,3 +119,4 @@ if st.button("Check message"):
                         columns=["Word", "Contribution"]
                     ).round(3)
                 )
+
